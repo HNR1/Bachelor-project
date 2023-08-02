@@ -28,16 +28,15 @@ Einleitender Text.
 In this work, our goal is to speed up an off-the-shelf Sta-
 ble Diffusion model without training using ToMe
 Token Merging \cite{bolya2023tomesd}.
-All experiments were conducted on a high perforance computing cluster provided by the Heinrich-Heine-Universität Düsseldorf
-
+All experiments were conducted on a high performance computing cluster (hpc) provided by the Heinrich-Heine-Universität Düsseldorf.
 
 
 
 
 \newpage
 \section{Background}
-\subsection{Tokens}
-Text.
+\subsection{What are tokens?}
+In image synthesis a token is a block of pixels that are processed collectively by the transformer. Stable Diffusion uses the CLIP tokenizer which defines a token as an 8x8 block of pixels, so an 768x768 pixel image has \(96*96=9216\) tokens.
 
 \subsection{Stable Diffusion}
 Diffusion models, which are built from a hierarchy of
@@ -87,10 +86,10 @@ in order to recreate the pre-merge amount of tokens.\\
 This naive approach does lose information because the now unmerged tokens both have the average of their previous values, but this loss is small due their already high similarity before the merge.\\ Further exploration might yield improvements here.
 
 \subsection{Bipartite-Soft-Matching}
-
+Text.
 
 \subsection{Token similarity}
-Similarity between tokens is \(not\) intuitively defined by the distance between their features, because the feature space in transformers is  \(overparameterized\).\\
+Similarity between tokens is \(not\) intuitively defined by the distance between their features, because the feature space in transformers is  overparameterized.
 
 \subsection{Different approaches}
 Text.
@@ -109,17 +108,19 @@ The performance is defined by\\
 
 \subsection{Setup}
 \subsubsection*{Software}
-The first iteration of the experiment was to compare how diffusion time and image quality change across a spectrum of different token volumes removed while token merging is applied in different layers of the transformer (self-attention, cross-attention and mlp).\\
+The first iteration of the experiment was to compare how diffusion time and image quality change across a spectrum of different volume of tokens  removed while token merging is applied in different layers of the transformer (self-attention, cross-attention and mlp).\\
 The images were generated with a "DiffusionPipeline" from HuggingFace's diffusers library using the "stable-diffusion-v1-5" model\cite{Rombach_2022_CVPR}.\\
 We sampled a set of \(n=500\) prompts from the dataset "Gustavosta/Stable-Diffusion-Prompts" on HuggingFace which has 80,000 prompts filtered and extracted from the image finder for Stable Diffusion: "Lexica.art".\\
 Seven 768x768 images were created per prompt with a 0\%, 10\%, 20\%, 30\%, 40\%, 50\% and 60\% merge applied respectively, creating a set of 3,500 images which can be split up into 7 subsets of 500 images each for every merge volume.\\
 This experiment was run multiple times with the merges applied in different layers of the transformer to compare performance.
+
 \subsubsection*{Hardware}
-All experminents were conducted on a GeForce GTX1080 TI gpus. Individual images were always created on single gpus.
+All experminents were conducted on Nvidida GeForce GTX 1080 Ti GPUs. Individual images were always created on single GPUs.
 
 \subsection{Adjustments}
 \subsubsection*{FID}
-We created and used our own fork of pytorch-fid\cite{Seitzer2020FID} to accommodate for the hpc not being connected to internet and therefore not being able to download the weights of Inception model to calculate the FID-values for every dataset. 
+We created and used our own fork of pytorch-fid\cite{Seitzer2020FID} to accommodate for the hpc not being connected to the internet and therefore not being able to download the weights of the Inception model to calculate FID-values. Our fork loads these weights from a local directory to avoid any connection to the internet and requires the user to have them pre-installed.
+
 \subsubsection*{Prompts}
 We shortened every prompt thats exceeds 300 characters in order to reduce the number of tokens to a maximum of 77, as CLIP\cite{radford2021learning} can only handle up to 77 tokens.\\
 This is done by determining the index (\(idx\)) of the last comma in the first 300 characters of every prompt and then cutting off everything from this point onwards.
