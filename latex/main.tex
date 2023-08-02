@@ -2,6 +2,7 @@
 \usepackage{graphicx} % Required for inserting images
 \usepackage{amsfonts}
 \usepackage{amsmath}
+\usepackage{listings}
 
 \font\myfont=cmr12 at 20pt
 \title{{\myfont Replication of Token Merging for fast Stable Diffusion}}
@@ -14,6 +15,7 @@
 
 \tableofcontents
 
+\newpage
 \section*{Abstract}
 Einleitender Text.
 
@@ -25,7 +27,8 @@ Einleitender Text.
 \section{Introduction}
 In this work, our goal is to speed up an off-the-shelf Sta-
 ble Diffusion model without training using ToMe
-Token Merging \cite{bolya2023tomesd}
+Token Merging \cite{bolya2023tomesd}.
+All experiments were conducted on a high perforance computing cluster provided by the Heinrich-Heine-Universität Düsseldorf
 
 
 
@@ -37,7 +40,8 @@ Token Merging \cite{bolya2023tomesd}
 Text.
 
 \subsection{Stable Diffusion}
-Text.
+Diffusion models, which are built from a hierarchy of
+denoising autoencoders. A neural network is trained to denoise images blurred with Gaussian noise by learning to reverse the diffusion process
 
 \subsubsection{Transformer Architecture}
 Text.
@@ -67,12 +71,12 @@ Text.
 
 \newpage
 \section{Token Merging}
-In Token Merging for Stable Diffusion\cite{bolya2023tomesd} the number of tokens is reduced by r\% by merging similar tokens before every diffusion step and unmerging them after to retain the original size of the image.\\ The tokens are partitioned into a source (src) and a destination (dst) set and the most similar tokens from the src set are continously merged into their dst counterparts until the number of tokens has reduced by \(r\)\%, with \(r\) being a hyperparameter determined by the user.\\ The choice of \(r\) is a trade-off between image fidelity and diffusion time as a lower amount of tokens requires a smaller computation time but more information about the image is lost in merge process.\\
+In Token Merging for Stable Diffusion\cite{bolya2023tomesd} the number of tokens is reduced by r\% by merging similar tokens before every diffusion step and unmerging them after to retain the original size of the image.\\ The tokens are partitioned into a source (src) and a destination (dst) set and the most similar tokens from the src set are continously merged into their dst counterparts until the number of tokens has reduced by \(r\)\%, with \(r\) being a hyperparameter determined by the user.\\ The choice of \(r\) is a trade-off between image fidelity and diffusion time as a lower amount of tokens requires a smaller computation time but more information about the image is lost in the merge process.\\
 The default setup of tomesd\cite{bolya2023tomesd} only applies merging to the self-attention layer in the transformer.
 
 \subsection{Merge and Unmerge algorithms}
 \subsubsection*{Merging.} The Merge algorithm uses Bipartite-Soft-Matching to determine the similarity of tokens between the src and dst set. The two most similar tokens are taken and merged into a new token until the overall number of tokens has reduced by \(r\)\%.\\
-Two tokens with \(c\) channels \(x_1, x_2  \in \mathbb{R}^c\) would be merged into a new token \(x_{1,2}^* \in \mathbb{R}^c \) by averaging it's features, e.g. \[x_{1,2}^* = \frac{x_1 + x_2}{2}\]
+Two tokens with \(c\) channels \(x_1, x_2 \in \mathbb{R}^c\) would be merged into a new token \(x_{1,2}^* \in \mathbb{R}^c \) by averaging it's features, e.g. \[x_{1,2}^* = \frac{x_1 + x_2}{2}\]
 
 \subsubsection*{Unmerging.} The Unmerge algorithm takes an originally merged token $x_{1,2}^* \in \mathbb{R}^c$ and splits it up into its original tokens $x_1', x_2' \in \mathbb{R}^c$, e.g. 
 \begin{align*}
@@ -86,6 +90,7 @@ This naive approach does lose information because the now unmerged tokens both h
 
 
 \subsection{Token similarity}
+Similarity between tokens is \(not\) intuitively defined by the distance between their features, because the feature space in transformers is  \(overparameterized\).\\
 
 \subsection{Different approaches}
 Text.
@@ -96,13 +101,34 @@ Text.
 
 \newpage
 \section{Experimental procedures}
-How does it differ from the original paper?
+We perform several experiments using the model "stable-diffusion-v1-5" by runwayml\cite{Rombach_2022_CVPR} and applying different kinds of token merging to a set of prompts. We always measure the performance.
+The performance is defined by\\ 
+\(1)\) image quality (FID-value) between sets of images that had token merging applied and their counterparts (that is same prompt, seed and image size) that didn't use any token merging and\\
+\(2)\) diffusion time to.
+
 
 \subsection{Setup}
-Text.
+\subsubsection*{Software}
+The first iteration of the experiment was to compare how diffusion time and image quality change across a spectrum of different token volumes removed while token merging is applied in different layers of the transformer (self-attention, cross-attention and mlp).\\
+The images were generated with a "DiffusionPipeline" from HuggingFace's diffusers library using the "stable-diffusion-v1-5" model\cite{Rombach_2022_CVPR}.\\
+We sampled a set of \(n=500\) prompts from the dataset "Gustavosta/Stable-Diffusion-Prompts" on HuggingFace which has 80,000 prompts filtered and extracted from the image finder for Stable Diffusion: "Lexica.art".\\
+Seven 768x768 images were created per prompt with a 0\%, 10\%, 20\%, 30\%, 40\%, 50\% and 60\% merge applied respectively, creating a set of 3,500 images which can be split up into 7 subsets of 500 images each for every merge volume.\\
+This experiment was run multiple times with the merges applied in different layers of the transformer to compare performance.
+\subsubsection*{Hardware}
+All experminents were conducted on a GeForce GTX1080 TI gpus. Individual images were always created on single gpus.
 
 \subsection{Adjustments}
-Creating my own fork of pytorch-fid \cite{Seitzer2020FID} to accommodate for the specific needs of this experiment. Or do I?
+\subsubsection*{FID}
+We created and used our own fork of pytorch-fid\cite{Seitzer2020FID} to accommodate for the hpc not being connected to internet and therefore not being able to download the weights of Inception model to calculate the FID-values for every dataset. 
+\subsubsection*{Prompts}
+We shortened every prompt thats exceeds 300 characters in order to reduce the number of tokens to a maximum of 77, as CLIP\cite{radford2021learning} can only handle up to 77 tokens.\\
+This is done by determining the index (\(idx\)) of the last comma in the first 300 characters of every prompt and then cutting off everything from this point onwards.
+\begin{lstlisting}[language=Python]
+prompt = prompt[:idx]
+\end{lstlisting}
+
+\subsection{Comparison to original setup}
+Text.
 
 \subsection{Results}
 Text.
